@@ -1,5 +1,6 @@
-package test.rpn;
+package test;
 
+import io.vavr.control.Either;
 import rpn.*;
 
 import java.util.Arrays;
@@ -20,7 +21,7 @@ public class CalculatorTest {
         rpn = Calculator.getInstance(Number::of, new Supplier<Stack<Command<Number>>>() {
             @Override
             public Stack<Command<Number>> get() {
-                return Stacks.newInstance();
+                return Stack.newInstance();
             }
         });
     }
@@ -73,7 +74,7 @@ public class CalculatorTest {
 
     @Test
     public void testCanEvaluateExample8() {
-        Optional<Exception> maybeException = rpn.offer("1", "2", "3", "*", "5", "+", "*", "*", "6", "5");
+        Optional<Exception> maybeException = rpn.push("1", "2", "3", "*", "5", "+", "*", "*", "6", "5");
         assertTrue(maybeException.isPresent());
         assertEquals(IllegalArgumentException.class, maybeException.get().getClass());
         assertEquals("Operator '*' (position 8), insufficient parameter", maybeException.get().getMessage());
@@ -81,20 +82,44 @@ public class CalculatorTest {
     }
 
     @Test
+    public void testCanUndoNothing() {
+        Optional<Exception> maybeException = rpn.push("undo", "3", "4");
+        assertTrue(maybeException.isPresent());
+        assertEquals(IllegalArgumentException.class, maybeException.get().getClass());
+        assertEquals("Operator 'undo' (position 1), insufficient parameter", maybeException.get().getMessage());
+        assertEquals(Arrays.asList(), rpn.evaluate().stream().map(n -> n.get().toString()).collect(Collectors.toList()));
+    }
+
+    @Test
+    public void testCanClearNothing() {
+        assertEvaluation(Arrays.asList(), "clear");
+    }
+
+    @Test
     public void testCanEvaluateInvalidOperator() {
-        Optional<Exception> maybeException = rpn.offer("Invalid");
+        Optional<Exception> maybeException = rpn.push("");
         assertTrue(maybeException.isPresent());
         assertEquals(IllegalArgumentException.class, maybeException.get().getClass());
         assertEvaluation(Arrays.asList("100"), "20", "5", "*");
         assertEvaluation(Arrays.asList("20", "5"), "undo");
-        maybeException = rpn.offer("null");
+        maybeException = rpn.push("null");
         assertTrue(maybeException.isPresent());
         assertEquals(IllegalArgumentException.class, maybeException.get().getClass());
     }
 
+    @Test
+    public void testCanEvaluateIllegalArithmeticStateAndRecover() {
+        Optional<Exception> maybeException = rpn.push("1", "2", "3", "+", "-", "sqrt", "2", "*", "6", "5", "*");
+        assertFalse(maybeException.isPresent());
+        List<Either<Exception, Number>> result = rpn.evaluate();
+        assertEquals(2, result.size());
+        assertEquals(NumberFormatException.class, result.get(0).getLeft().getClass());
+        assertEquals("30", result.get(1).get().toString());
+        assertEvaluation(Arrays.asList("4", "30"), "undo", "undo", "undo", "undo", "undo", "undo", "-1", "*", "sqrt", "2", "*", "6", "5", "*");
+    }
 
     private void assertEvaluation(List<String> expected, String ... input) {
-        Optional<Exception> maybeException = rpn.offer(input);
+        Optional<Exception> maybeException = rpn.push(input);
         assertFalse(maybeException.isPresent());
         assertEquals(expected, rpn.evaluate().stream().map(n -> n.get().toString()).collect(Collectors.toList()));
     }
