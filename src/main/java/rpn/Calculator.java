@@ -18,6 +18,7 @@ public final class Calculator<E extends Operatable<E>> {
     private Stack<Command<E>> storage;
     private CommandRegistry<E> commandRegistry;
     private Supplier<Stack<Command<E>>> stackProvider;
+    private CacheStrategy<E> cachingStrategy = CacheStrategy.get();
 
     private Calculator() {};
 
@@ -74,44 +75,12 @@ public final class Calculator<E extends Operatable<E>> {
                                 "Operator '" + elementOrOperator + "' (position " + (storage.allSize() + 1) + "), insufficient parameter");
                     commands = definition.getTransformer().apply(storage.pop(size.value()));
                 }
-                storage.push(commands.stream().map(c -> cacheableCommand(c)).collect(Collectors.toList()));
+                storage.push(commands.stream().map(c -> cachingStrategy.apply(c)).collect(Collectors.toList()));
             } catch (Exception e) {
                 return Optional.of(e);
             }
             return Optional.empty();
         }
-    }
-
-    /*
-    * Decorator to provide caching capability.
-    * Implementation mimics the double locking mechanism of a singleton
-    * */
-    private Command<E> cacheableCommand(Command<E> uncached) {
-        return new Command<E>() {
-            private volatile Either<Exception, E> result;
-            private Object lock = new Object();
-
-            @Override
-            public Either<Exception, E> apply() {
-                if (result == null) {
-                    synchronized (lock) {
-                        if (result == null)
-                            result = uncached.apply();
-                    }
-                }
-                return result;
-            }
-
-            @Override
-            public List<Command<E>> undo() {
-                return uncached.undo();
-            }
-
-            @Override
-            public int size() {
-                return uncached.size();
-            }
-        };
     }
 
     public static void main(String[] args) {
