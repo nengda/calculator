@@ -1,4 +1,4 @@
-package test;
+package test.rpn;
 
 import io.vavr.control.Either;
 import rpn.*;

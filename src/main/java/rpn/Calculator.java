@@ -1,7 +1,6 @@
 package rpn;
 
 import io.vavr.control.Either;
-import org.junit.jupiter.api.parallel.Execution;
 
 import java.util.*;
 import java.util.function.Function;
