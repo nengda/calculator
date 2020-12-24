@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import rpn.Number;
 
-import java.math.BigDecimal;
-
 public class NumberTest {
     @Test
     public void testCanCreateNumber() {
