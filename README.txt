@@ -18,3 +18,43 @@ The design of RPN calculator closely follows Single Responsibility Principle. It
 Following Open-Closed Principle, interfaces of Operatable and Stack is abstracted away from the coupling of JDK implementation (BigDecimal or choice of Stack/ConcurrentLinkedDeque/ArrayDeque). Benefit is obvious: different stack implementation (including our own implementation) could be picked without worrying about other parts of the program.
 
 Type safety is another principal followed closely in the design of Canvas commands. In a nutshell, the goal of type safety is to eliminate as many programming bugs as possible at compile time, where the cost of mistake is lowest. For example, ArgSize is chosen over raw int to capture unintentional use of negative int at compile time. For another example, the return type of Either<Exception, E> suggests the result of the evaluation can either be number or exception. The caller is obliged to build in the exception handling together with result processing.
+
+Q/A
+1. Why not throw an Exception?
+ Either<Exception, E> is chosen to be Command's return type over throwing an Exception. For several reasons:
+ - Exception throwing and catching increases the complexity of our program. Client code needs to prepare catching both checked and unchecked exceptions. The program enters
+ - Exception disrupts our program's execution flow, jumping from the point at which the exception is thrown to whatever point, with whatever state, our program defines the catch point. And in our specific case, all following commands stops to execute (even they are still good to execute) when one command fails to execute.
+ - Exception is more complicated to test. JUnit 5 has made it simpler to test exceptions, but it would be just as easy as testing other return values if exception is returned than thrown.
+
+2. Why not reference BigDecimal directly, but create an Operatable interface? Seems to make things more complicated.
+It allows a different implementation of math operators if BigDecimal no longer fits our need in the future. It also helps prepare the extension needed to bring it online.
+
+3. Why not use bottom-up approach like the following?
+
+public class Add implements Operator {
+    @Override
+    public BigDecimal apply(NumberProvider provider) {
+        return provider.nextNumber().add(provider.nextNumber());
+    }
+}
+
+public class Caculator implements NumberProvider {
+    private Stack<BigDecimal> numbers;
+
+    @Override
+    public BigDecimal nextNumber() {
+        return numbers.pop();
+    }
+
+    public void process(String[] cmds) {
+        for (String cmd: cmds) {
+            Operator operator = OperatorFactory.get(cmd);
+            if (operator != null) {
+                BigDecimal result = operator.apply(this);
+                ...
+            }
+        }
+    }
+}
+
+The bottom-up approach has benifits like open for extension. Creating a new operator is just another implementation of the Operator interface. But one big drawback is it mixes the stack minipulation (provider.nextNumber) with the business logic (.add), which makes it harder to refactor if we want to consider thread safty in the future (each operator needs to care about thread safty in their own apply() method). It's also hard to achieve concurrent evaluation as each operator is evaluated eagerly and sequentially. For example "1 2 + 3 4 * -", ideally the addition and multiplication should be executed concurrently but bottom-up doesn't seem to be the best approach for the task.
