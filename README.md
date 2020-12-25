@@ -24,9 +24,9 @@ Type safety is another principal followed closely in the design of Canvas comman
 ### Q/A
 1. Why not throw an Exception?
  Either<Exception, E> is chosen to be Command's return type over throwing an Exception. For several reasons:
- - Exception throwing and catching increases the complexity of our program. Client code needs to prepare catching both checked and unchecked exceptions. The program enters
- - Exception disrupts our program's execution flow, jumping from the point at which the exception is thrown to whatever point, with whatever state, our program defines the catch point. And in our specific case, all following commands stops to execute (even they are still good to execute) when one command fails to execute.
- - Exception is more complicated to test. JUnit 5 has made it simpler to test exceptions, but it would be just as easy as testing other return values if exception is returned than thrown.
+  - Exception throwing and catching increases the complexity of our program. Client code needs to prepare catching both checked and unchecked exceptions. The program enters
+  - Exception disrupts our program's execution flow, jumping from the point at which the exception is thrown to whatever point, with whatever state, our program defines the catch point. And in our specific case, all following commands stops to execute (even they are still good to execute) when one command fails to execute.
+  - Exception is more complicated to test. JUnit 5 has made it simpler to test exceptions, but it would be just as easy as testing other return values if exception is returned than thrown.
 
 1. Why not reference BigDecimal directly, but create an Operatable interface? Seems to make things more complicated.
 It allows a different implementation of math operators if BigDecimal no longer fits our need in the future. It also helps prepare the extension needed to bring it online.
